@@ -1,0 +1,230 @@
+{
+  "variables": {
+    "aws_access_key": "{{env `AWS_ACCESS_KEY_ID`}}",
+    "aws_secret_key": "{{env `AWS_SECRET_ACCESS_KEY`}}",
+    "common_iso_url": "http://releases.ubuntu.com/14.04/ubuntu-14.04-server-amd64.iso",
+    "common_iso_checksum": "01545fa976c8367b4f0d59169ac4866c"
+  },
+  "builders": [
+    {
+      "access_key": "{{user `aws_access_key`}}",
+      "ami_description": "ubuntu 14.04 amd64 spantree ",
+      "ami_name": "ubuntu 14.04 amd64 spantree {{isotime | clean_ami_name}}",
+      "instance_type": "m3.medium",
+      "region": "us-east-1",
+      "secret_key": "{{user `aws_secret_key`}}",
+      "source_ami": "ami-018c9568",
+      "ssh_username": "ubuntu",
+      "tags": {
+        "OS_Version": "Ubuntu",
+        "Release": "trusty",
+        "Vendor": "spantree"
+      },
+      "type": "amazon-ebs"
+    },
+    {
+      "boot_command": [
+        "<esc><esc><enter><wait>",
+        "/install/vmlinuz noapic preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg <wait>",
+        "debian-installer=en_US auto locale=en_US kbd-chooser/method=us <wait>",
+        "hostname={{ .Name }} <wait>",
+        "fb=false debconf/frontend=noninteractive <wait>",
+        "keyboard-configuration/modelcode=SKIP keyboard-configuration/layout=USA keyboard-configuration/variant=USA console-setup/ask_detect=false <wait>",
+        "initrd=/install/initrd.gz -- <enter><wait>"
+      ],
+      "boot_wait": "4s",
+      "disk_size": 40240,
+      "guest_additions_url": "https://www.virtualbox.org/download/testcase/VBoxGuestAdditions_4.3.11-93070.iso",
+      "guest_additions_sha256": "a1f6a3c35525493d9bbe46b7e288869e8adc7572cfda7b646d6a3b79888678fe",
+      "guest_additions_path": "VBoxGuestAdditions_{{.Version}}.iso",
+      "guest_os_type": "Ubuntu_64",
+      "http_directory": "http",
+      "iso_checksum": "{{ user `common_iso_checksum` }}",
+      "iso_checksum_type": "md5",
+      "iso_url": "{{ user `common_iso_url` }}",
+      "shutdown_command": "echo 'shutdown -P now' > shutdown.sh; echo 'vagrant'|sudo -S sh 'shutdown.sh'",
+      "ssh_password": "vagrant",
+      "ssh_port": 22,
+      "ssh_username": "vagrant",
+      "ssh_wait_timeout": "10000s",
+      "type": "virtualbox-iso",
+      "vboxmanage": [
+        [
+          "modifyvm",
+          "{{.Name}}",
+          "--memory",
+          "512"
+        ],
+        [
+          "modifyvm",
+          "{{.Name}}",
+          "--cpus",
+          "1"
+        ]
+      ],
+      "virtualbox_version_file": ".vbox_version"
+    },
+    {
+      "boot_command": [
+        "<esc><esc><enter><wait>",
+        "/install/vmlinuz noapic preseed/url=http://{{ .HTTPIP }}:{{ .HTTPPort }}/preseed.cfg <wait>",
+        "debian-installer=en_US auto locale=en_US kbd-chooser/method=us <wait>",
+        "hostname={{ .Name }} <wait>",
+        "fb=false debconf/frontend=noninteractive <wait>",
+        "keyboard-configuration/modelcode=SKIP keyboard-configuration/layout=USA keyboard-configuration/variant=USA console-setup/ask_detect=false <wait>",
+        "initrd=/install/initrd.gz -- <enter><wait>"
+      ],
+      "boot_wait": "4s",
+      "disk_size": 40240,
+      "guest_os_type": "ubuntu-64",
+      "http_directory": "http",
+      "iso_checksum": "{{ user `common_iso_checksum` }}",
+      "iso_checksum_type": "md5",
+      "iso_url": "{{ user `common_iso_url` }}",
+      "shutdown_command": "echo 'shutdown -P now' > shutdown.sh; echo 'vagrant'|sudo -S sh 'shutdown.sh'",
+      "ssh_password": "vagrant",
+      "ssh_port": 22,
+      "ssh_username": "vagrant",
+      "ssh_wait_timeout": "10000s",
+      "tools_upload_flavor": "linux",
+      "type": "vmware-iso",
+      "vmx_data": {
+        "cpuid.coresPerSocket": "1",
+        "memsize": "512",
+        "numvcpus": "1"
+      }
+    }
+  ],
+  "post-processors": [
+    {
+      "only": [
+        "virtualbox-iso",
+        "vmware-iso"
+      ],
+      "type": "vagrant"
+    }
+  ],
+  "provisioners": [
+    {
+      "override": {
+        "virtualbox-iso": {
+          "execute_command": "echo 'vagrant'|sudo -S sh '{{.Path}}'"
+        },
+        "vmware-iso": {
+          "execute_command": "echo 'vagrant'|sudo -S sh '{{.Path}}'"
+        },
+        "amazon-ebs": {
+          "execute_command": "sudo -S sh '{{.Path}}'"
+        }
+      },
+      "scripts": [
+        "scripts/base.sh"
+      ],
+      "type": "shell"
+    },
+    {
+      "only": [
+        "virtualbox-iso",
+        "vmware-iso"
+      ],
+      "override": {
+        "virtualbox-iso": {
+          "execute_command": "echo 'vagrant'|sudo -S sh '{{.Path}}'"
+        },
+        "vmware-iso": {
+          "execute_command": "echo 'vagrant'|sudo -S sh '{{.Path}}'"
+        }
+      },
+      "scripts": [
+        "scripts/vagrant.sh"
+      ],
+      "type": "shell"
+    },
+    {
+      "only": [
+        "virtualbox-iso"
+      ],
+      "override": {
+        "virtualbox-iso": {
+          "execute_command": "echo 'vagrant'|sudo -S sh '{{.Path}}'"
+        }
+      },
+      "scripts": [
+        "scripts/virtualbox.sh"
+      ],
+      "type": "shell"
+    },
+    {
+      "only": [
+        "vmware-iso"
+      ],
+      "override": {
+        "vmware-iso": {
+          "execute_command": "echo 'vagrant'|sudo -S sh '{{.Path}}'"
+        }
+      },
+      "scripts": [
+        "scripts/vmware.sh"
+      ],
+      "type": "shell"
+    },
+    {
+      "override": {
+        "virtualbox-iso": {
+          "execute_command": "echo 'vagrant'|sudo -S sh '{{.Path}}'"
+        },
+        "vmware-iso": {
+          "execute_command": "echo 'vagrant'|sudo -S sh '{{.Path}}'"
+        },
+        "amazon-ebs": {
+          "execute_command": "sudo -S sh '{{.Path}}'"
+        }
+      },
+      "scripts": [
+        "scripts/puppet.sh",
+        "scripts/chef.sh",
+        "scripts/oraclejava7.sh",
+        "scripts/librarian.sh",
+        "scripts/hiera-eyaml.sh",
+        "scripts/cleanup.sh"
+      ],
+      "type": "shell"
+    },
+    {
+      "only": [
+        "virtualbox-iso",
+        "vmware-iso"
+      ],
+      "override": {
+        "virtualbox-iso": {
+          "execute_command": "echo 'vagrant'|sudo -S sh '{{.Path}}'"
+        },
+        "vmware-iso": {
+          "execute_command": "echo 'vagrant'|sudo -S sh '{{.Path}}'"
+        }
+      },
+      "scripts": [
+        "scripts/cleanup-ifs.sh"
+      ],
+      "type": "shell"
+    },
+    {
+      "override": {
+        "virtualbox-iso": {
+          "execute_command": "echo 'vagrant'|sudo -S sh '{{.Path}}'"
+        },
+        "vmware-iso": {
+          "execute_command": "echo 'vagrant'|sudo -S sh '{{.Path}}'"
+        },
+        "amazon-ebs": {
+          "execute_command": "sudo -S sh '{{.Path}}'"
+        }
+      },
+      "scripts": [
+        "scripts/zerodisk.sh"
+      ],
+      "type": "shell"
+    }
+  ]
+}
+
